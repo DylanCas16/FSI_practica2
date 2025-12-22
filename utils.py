@@ -1,3 +1,13 @@
+import copy
+from filecmp import cmp
+from functools import reduce
+import heapq
+from inspect import isabstract
+import math
+import operator
+import os
+import random
+import sys
 
 #______________________________________________________________________________
 # Simple Data Structures: infinity, Dict, Struct
@@ -507,7 +517,7 @@ class Queue:
     as lists.  If Python ever gets interfaces, Queue will be an interface."""
 
     def __init__(self):
-        abstract
+        isabstract
 
     def extend(self, items):
         for item in items:
@@ -549,5 +559,40 @@ class FIFOQueue(Queue):
 ## Alas, it is Fig[3,10] not Fig[3.10], because that would be the same as Fig[3.1]
 Fig = {}
 
+class PriorityQueue(Queue):
+    """Queue that pops the item with minimum f(item)."""
+    def __init__(self, f=lambda x: x):
+        self.heap = []
+        self.f = f
 
+    def append(self, item):
+        heapq.heappush(self.heap, (self.f(item), item))
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+    def pop(self):
+        if self.heap:
+            return heapq.heappop(self.heap)[1]
+        else:
+            raise Exception('Trying to pop from empty PriorityQueue')
+
+    def __len__(self):
+        return len(self.heap)
+
+    def __contains__(self, item):
+        return any(item == pair[1] for pair in self.heap)
+
+    def __getitem__(self, key):
+        for _, item in self.heap:
+            if item == key:
+                return item
+
+    def __delitem__(self, key):
+        for i, (value, item) in enumerate(self.heap):
+            if item == key:
+                self.heap.pop(i)
+                heapq.heapify(self.heap)
+                return
 

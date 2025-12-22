@@ -31,7 +31,7 @@ class Problem:
         from this state. If there are many successors, consider an iterator
         that yields the successors one at a time, rather than building them
         all at once. Iterators will work fine within the framework."""
-        abstract
+        isabstract
 
     def goal_test(self, state):
         """Return True if the state is a goal. The default method compares the
@@ -50,23 +50,14 @@ class Problem:
     def value(self):
         """For optimization problems, each state has a value.  Hill-climbing
         and related algorithms try to maximize this value."""
-        abstract
+        isabstract
 
 
 # ______________________________________________________________________________
 
 class Node:
-    """A node in a search tree. Contains a pointer to the parent (the node
-    that this is a successor of) and to the actual state for this node. Note
-    that if a state is arrived at by two paths, then there are two nodes with
-    the same state.  Also includes the action that got us to this state, and
-    the total path_cost (also known as g) to reach the node.  Other functions
-    may add an f and h value; see best_first_graph_search and astar_search for
-    an explanation of how the f and h values are handled. You will not need to
-    subclass this class."""
-
+    """A node in a search tree."""
     def __init__(self, state, parent=None, action=None, path_cost=0):
-        """Create a search tree Node, derived from a parent by an action."""
         update(self, state=state, parent=parent, action=action,
                path_cost=path_cost, depth=0)
         if parent:
@@ -75,8 +66,11 @@ class Node:
     def __repr__(self):
         return "<Node %s>" % (self.state,)
 
+    # NECESARIO PARA PRIORITY QUEUE: Permite comparar nodos
+    def __lt__(self, other):
+        return self.path_cost < other.path_cost
+
     def path(self):
-        """Create a list of nodes from the root to this node."""
         x, result = self, [self]
         while x.parent:
             result.append(x.parent)
@@ -84,39 +78,74 @@ class Node:
         return result
 
     def expand(self, problem):
-        """Return a list of nodes reachable from this node. [Fig. 3.8]"""
         return [Node(next, self, act,
                      problem.path_cost(self.path_cost, self.state, act, next))
                 for (act, next) in problem.successor(self.state)]
 
-
 # ______________________________________________________________________________
 ## Uninformed Search algorithms
 
+# PARTE 3: Modificación para contar nodos
 def graph_search(problem, fringe):
     """Search through the successors of a problem to find a goal.
-    The argument fringe should be an empty queue.
-    If two paths reach a state, only use the best one. [Fig. 3.18]"""
+    Returns: (SolutionNode, GeneratedNodes, VisitedNodes)"""
     closed = {}
-    fringe.append(Node(problem.initial))
+    
+    # Contadores
+    nodes_generated = 0
+    nodes_visited = 0
+    
+    # Generamos nodo inicial
+    initial_node = Node(problem.initial)
+    nodes_generated += 1
+    
+    fringe.append(initial_node)
+    
     while fringe:
         node = fringe.pop()
+        nodes_visited += 1 # Visitamos (analizamos) el nodo
+        
         if problem.goal_test(node.state):
-            return node
+            return node, nodes_generated, nodes_visited
+            
         if node.state not in closed:
             closed[node.state] = True
-            fringe.extend(node.expand(problem))
-    return None
-
+            successors = node.expand(problem)
+            nodes_generated += len(successors) # Sumamos los hijos generados
+            fringe.extend(successors)
+            
+    return None, nodes_generated, nodes_visited
 
 def breadth_first_graph_search(problem):
-    """Search the shallowest nodes in the search tree first. [p 74]"""
-    return graph_search(problem, FIFOQueue())  # FIFOQueue -> fringe
-
+    return graph_search(problem, FIFOQueue())
 
 def depth_first_graph_search(problem):
-    """Search the deepest nodes in the search tree first. [p 74]"""
     return graph_search(problem, Stack())
+
+# PARTE 1: Ramificación y Acotación (Coste Uniforme)
+def branch_and_bound_graph_search(problem):
+    """
+    Estrategia: Ramificación y Acotación (Branch & Bound).
+    Ordena la frontera por coste de ruta g(n).
+    """
+    # Ordenamos por path_cost (g)
+    return graph_search(problem, PriorityQueue(lambda node: node.path_cost))
+
+# ______________________________________________________________________________
+## Informed Search algorithms (Heuristics)
+
+def best_first_graph_search(problem, f):
+    """Search the nodes with the lowest f scores first."""
+    return graph_search(problem, PriorityQueue(f))
+
+# PARTE 2: Ramificación y Acotación con Subestimación (A*)
+def astar_search(problem, h=None):
+    """
+    Estrategia: A* (Branch & Bound con subestimación).
+    Ordena la frontera por f(n) = g(n) + h(n).
+    """
+    h = memoize(h or problem.h, 'h')
+    return best_first_graph_search(problem, lambda n: n.path_cost + h(n))
 
 
 
