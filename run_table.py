@@ -1,4 +1,5 @@
 import search
+import time   # <-- AÑADIDO
 
 # -------------------------------------------------
 # Divide la ruta en varias líneas sin romper columnas
@@ -104,6 +105,8 @@ def print_row(id, origen, destino, bfs, dfs, bb, astar):
 # -------------------------------------------------
 # EJECUCIÓN
 # -------------------------------------------------
+start_time = time.time()
+
 city_map = {
     'Oradea': 'O',
     'Arad': 'A',
@@ -125,3 +128,6 @@ for city_name, city_key in city_map.items():
 
     print_row(id, city_name, "Bucharest", bfs, dfs, bb, ast)
     id += 1
+
+end_time = time.time()   #
+print(f"\nTiempo total de búsqueda: {end_time - start_time:.4f} segundos")
